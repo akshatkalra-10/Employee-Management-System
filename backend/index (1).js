@@ -1,13 +1,18 @@
+const fs = require("fs");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, '.env') });
 const { Parser } = require("json2csv");
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
-const fs = require("fs");
+
+const rootEnvPath = path.join(__dirname, "..", ".env");
+const backendEnvPath = path.join(__dirname, ".env");
+require("dotenv").config({
+    path: fs.existsSync(rootEnvPath) ? rootEnvPath : backendEnvPath,
+});
 
 const Employee = require("./models/employee");
 const Attendance = require("./models/attendance");
@@ -15,12 +20,13 @@ const Leave = require("./models/leave");
 const Payroll = require("./models/payroll");
 
 const app = express();
+const uploadsDir = process.env.VERCEL ? "/tmp/uploads" : path.join(process.cwd(), "uploads");
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(uploadsDir));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -29,14 +35,14 @@ app.use((req, res, next) => {
 });
 
 // Create uploads directory if it doesn't exist
-if (!fs.existsSync("uploads")) {
-    fs.mkdirSync("uploads");
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Multer configuration for file upload
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "uploads/");
+        cb(null, uploadsDir);
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -49,16 +55,24 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
     console.error("MONGODB_URI is not set. Add it to your .env file.");
+    if (process.env.VERCEL) {
+        throw new Error("MONGODB_URI is not set");
+    }
     process.exit(1);
 }
 
-mongoose.connect(MONGODB_URI)
-    .then(() => {
-        console.log("MongoDB connected");
-    })
-    .catch((err) => {
-        console.log(err);
-    });
+let dbConnected = false;
+async function connectToDatabase() {
+    if (dbConnected || mongoose.connection.readyState === 1) return;
+
+    await mongoose.connect(MONGODB_URI);
+    dbConnected = true;
+    console.log("MongoDB connected");
+}
+
+connectToDatabase().catch((err) => {
+    console.log(err);
+});
 
 // ==================== AUTHENTICATION ====================
 app.post("/login", (req, res) => {
@@ -669,6 +683,10 @@ app.get("/departments", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;
