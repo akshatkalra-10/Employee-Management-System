@@ -1,0 +1,11 @@
+{
+  "name": "employee-management-backend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index (1).js",
+  "scripts": {
+    "dev": "node \"index (1).js\"",
+    "start": "node \"index (1).js\"",
+    "migrate:db": "node scripts/migrate-mongodb.js"
+  }
+}
