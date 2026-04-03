@@ -6,9 +6,10 @@
   "scripts": {
     "start": "node \"backend/index (1).js\"",
     "migrate:db": "node backend/scripts/migrate-mongodb.js",
-    "dev": "vite frontend",
-    "build": "vite build frontend",
-    "preview": "vite preview frontend"
+    "dev": "npm --prefix frontend_new run dev",
+    "build": "node -e \"console.log('Root build: no build step required for backend deployment.');\"",
+    "build:frontend": "npm --prefix frontend_new run build",
+    "preview": "npm --prefix frontend_new run preview"
   },
   "dependencies": {
     "axios": "^1.4.0",
