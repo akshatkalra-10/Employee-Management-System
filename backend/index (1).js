@@ -28,6 +28,20 @@ app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static(uploadsDir));
 
+app.get("/", (req, res) => {
+    res.json({
+        success: true,
+        message: "Employee Management API is running",
+    });
+});
+
+app.get("/health", (req, res) => {
+    res.json({
+        success: true,
+        status: "ok",
+    });
+});
+
 // Request logging middleware
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
