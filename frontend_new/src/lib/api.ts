@@ -1,7 +1,5 @@
 // Centralized API service layer for Express/MongoDB backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-
-console.log('API_BASE_URL:', API_BASE_URL); // Debug log
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -29,8 +27,6 @@ async function request<T = any>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
-  console.log('Making request to:', url); // Debug log
 
   const config: RequestInit = {
     headers: {

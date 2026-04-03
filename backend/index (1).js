@@ -28,6 +28,17 @@ app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static(uploadsDir));
 
+// In Vercel single-project mode, API calls arrive with /api prefix.
+// Strip that prefix so existing route handlers continue to work unchanged.
+app.use((req, res, next) => {
+    if (req.url === "/api") {
+        req.url = "/";
+    } else if (req.url.startsWith("/api/")) {
+        req.url = req.url.slice(4);
+    }
+    next();
+});
+
 app.get("/", (req, res) => {
     res.json({
         success: true,
