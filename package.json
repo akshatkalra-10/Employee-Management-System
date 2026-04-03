@@ -7,7 +7,7 @@
     "start": "node \"backend/index (1).js\"",
     "migrate:db": "node backend/scripts/migrate-mongodb.js",
     "dev": "npm --prefix frontend_new run dev",
-    "build": "node -e \"console.log('Root build: no build step required for backend deployment.');\"",
+    "build": "node -e \"const fs=require('fs');fs.mkdirSync('dist',{recursive:true});console.log('Root build: created dist directory for Vercel output setting.');\"",
     "build:frontend": "npm --prefix frontend_new run build",
     "preview": "npm --prefix frontend_new run preview"
   },
