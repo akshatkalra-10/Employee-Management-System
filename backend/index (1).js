@@ -7,6 +7,7 @@ const path = require("path");
 const { Parser } = require("json2csv");
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const rootEnvPath = path.join(__dirname, "..", ".env");
 const backendEnvPath = path.join(__dirname, ".env");
@@ -703,6 +704,128 @@ app.get("/departments", async (req, res) => {
         res.json({success: true, data: departments});
     } catch (error) {
         res.status(500).json({success: false, message: error.message});
+    }
+});
+
+// ==================== GEMINI AI CHATBOT ====================
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+app.post("/chat", async (req, res) => {
+    try {
+        const { message, history } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ success: false, message: "Message is required" });
+        }
+
+        if (!process.env.GEMINI_API_KEY) {
+            return res.status(500).json({ success: false, message: "Gemini API key is not configured" });
+        }
+
+        // Fetch live EMS data for context
+        const [
+            totalEmployees,
+            activeEmployees,
+            inactiveEmployees,
+            departments,
+            avgSalaryResult,
+            recentLeaves,
+            employeeList,
+            pendingLeaves
+        ] = await Promise.all([
+            Employee.countDocuments(),
+            Employee.countDocuments({ status: "Active" }),
+            Employee.countDocuments({ status: "Inactive" }),
+            Employee.aggregate([{ $group: { _id: "$department", count: { $sum: 1 } } }]),
+            Employee.aggregate([{ $group: { _id: null, average: { $avg: "$salary" } } }]),
+            Leave.find().sort({ createdAt: -1 }).limit(10).populate("employeeId", "name department"),
+            Employee.find().select("name email department position salary status joinDate").limit(50),
+            Leave.countDocuments({ status: "Pending" })
+        ]);
+
+        const avgSalary = avgSalaryResult[0]?.average || 0;
+        const departmentSummary = departments.map(d => `${d._id}: ${d.count} employees`).join(", ");
+        const employeeDetails = employeeList.map(e => 
+            `- ${e.name} | ${e.email} | ${e.department} | ${e.position || "N/A"} | ₹${e.salary} | ${e.status} | Joined: ${e.joinDate ? new Date(e.joinDate).toLocaleDateString() : "N/A"}`
+        ).join("\n");
+        const recentLeaveDetails = recentLeaves.map(l =>
+            `- ${l.employeeId?.name || "Unknown"} (${l.employeeId?.department || "N/A"}) | Type: ${l.leaveType} | ${l.status} | ${new Date(l.startDate).toLocaleDateString()} to ${new Date(l.endDate).toLocaleDateString()} | Reason: ${l.reason}`
+        ).join("\n");
+
+        const systemPrompt = `You are an intelligent HR assistant chatbot embedded in an Employee Management System (EMS). You help HR managers and admins with employee-related queries, provide insights, and assist with HR tasks.
+
+CURRENT LIVE DATA FROM THE EMS DATABASE:
+==========================================
+Total Employees: ${totalEmployees}
+Active Employees: ${activeEmployees}
+Inactive Employees: ${inactiveEmployees}
+Average Salary: ₹${Math.round(avgSalary).toLocaleString()}
+Pending Leave Requests: ${pendingLeaves}
+Departments: ${departmentSummary}
+
+EMPLOYEE DIRECTORY:
+${employeeDetails || "No employees found in the system."}
+
+RECENT LEAVE REQUESTS:
+${recentLeaveDetails || "No recent leave requests."}
+==========================================
+
+GUIDELINES:
+- Answer questions using the real data above. Be specific with names, numbers, and departments.
+- For questions about employee counts, salaries, departments, etc., always use the live data.
+- If asked about something not in the data, say so honestly.
+- Be concise, professional, and helpful.
+- Use bullet points and formatting when listing information.
+- You can suggest HR best practices, policies, and help draft communications.
+- When relevant, mention specific features available in the EMS: Employee Directory, Attendance Tracking, Leave Management, Payroll, and Analytics.
+- Format responses cleanly. Use **bold** for emphasis and bullet points for lists.`;
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash",
+            systemInstruction: systemPrompt,
+        });
+
+        // Build conversation history for context
+        const chatHistory = (history || []).map(msg => ({
+            role: msg.role === "user" ? "user" : "model",
+            parts: [{ text: msg.content }]
+        }));
+
+        // Retry logic for rate limits
+        let reply = "";
+        let lastError = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                const chat = model.startChat({ history: chatHistory });
+                const result = await chat.sendMessage(message);
+                reply = result.response.text();
+                lastError = null;
+                break;
+            } catch (err) {
+                lastError = err;
+                const errMsg = (err?.message || err?.toString() || "").toLowerCase();
+                const isRateLimit = errMsg.includes("429") || errMsg.includes("resource_exhausted") || errMsg.includes("too many") || errMsg.includes("retry");
+                if (isRateLimit && attempt < 2) {
+                    const wait = (attempt + 1) * 8000;
+                    console.log(`Gemini rate limited (attempt ${attempt + 1}), retrying in ${wait/1000}s...`);
+                    await new Promise(r => setTimeout(r, wait));
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if (lastError) {
+            throw lastError;
+        }
+
+        res.json({ success: true, reply });
+    } catch (error) {
+        console.error("Chat error:", error.message || error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Failed to get AI response. Please try again in a moment." 
+        });
     }
 });
 

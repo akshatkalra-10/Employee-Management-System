@@ -39,3 +39,108 @@
     @apply bg-blue-600/90 backdrop-blur-lg border border-white/20 shadow-md rounded-xl px-4 py-2 font-medium text-white hover:bg-blue-700/90 hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2;
   }
 }
+
+/* ==================== CHATBOT ANIMATIONS ==================== */
+
+/* Typing dots */
+.chatbot-typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  animation: chatbot-bounce 1.4s ease-in-out infinite;
+}
+
+@keyframes chatbot-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+/* FAB pulse glow */
+.chatbot-fab-pulse {
+  animation: chatbot-glow 3s ease-in-out infinite;
+}
+
+@keyframes chatbot-glow {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3),
+                0 0 0 0 rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.5),
+                0 0 0 8px rgba(99, 102, 241, 0);
+  }
+}
+
+/* Slide-up animation for messages */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.35s ease-out forwards;
+}
+
+/* Fade-in for welcome screen */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Chat message content formatting */
+.chatbot-message-content strong {
+  font-weight: 700;
+}
+
+.chatbot-message-content em {
+  font-style: italic;
+}
+
+/* Custom scrollbar for chat */
+.chatbot-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chatbot-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatbot-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 20px;
+}
+
+.chatbot-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Horizontal scrollbar for quick prompts */
+.chatbot-scrollbar-x::-webkit-scrollbar {
+  height: 3px;
+}
+
+.chatbot-scrollbar-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatbot-scrollbar-x::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.2);
+  border-radius: 20px;
+}

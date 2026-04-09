@@ -8,6 +8,7 @@ import AttendanceTracker from './components/Attendance/AttendanceTracker';
 import LeaveManagement from './components/Leave/LeaveManagement';
 import PayrollManagement from './components/Payroll/PayrollManagement';
 import AnalyticsDashboard from './components/Analytics/AnalyticsDashboard';
+import Chatbot from './components/Chatbot/Chatbot';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -45,9 +46,12 @@ function AppContent() {
   };
 
   return (
-    <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab}>
-      {renderContent()}
-    </DashboardLayout>
+    <>
+      <DashboardLayout activeTab={activeTab} onTabChange={setActiveTab}>
+        {renderContent()}
+      </DashboardLayout>
+      <Chatbot />
+    </>
   );
 }
 
